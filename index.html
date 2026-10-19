@@ -1,1 +1,161 @@
 
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#FAF5F0">
+<title>KOYOMI | Private Album</title>
+<style>
+:root{--cream:#FAF5F0;--rose:#A77C86;--darkrose:#835B65;--teal:#5F8D8D;--ink:#403631;--pale:#F2E7E4}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif}
+main{max-width:540px;margin:auto;padding:22px 18px;min-height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #E5D8D4;padding-bottom:16px}
+.logo{font-family:Georgia,serif;color:var(--darkrose);font-size:24px;letter-spacing:3px}
+.subtitle{font-size:10px;letter-spacing:3px;color:var(--rose)}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:13px 20px;background:var(--darkrose);color:white}
+button:disabled{opacity:.35;cursor:default}
+.lang{background:transparent;color:var(--darkrose);border:1px solid #D9C6C7;padding:9px}
+.screen{display:none}
+.screen.active{display:block}
+.center{text-align:center}
+.age{padding:90px 8px 60px}
+.lockicon{font-size:42px;color:var(--darkrose)}
+.eyebrow{color:var(--rose);letter-spacing:4px;font-size:12px;margin-top:26px}
+h1{font-size:30px;font-weight:500;margin:18px 0}
+h2{font-size:24px;font-weight:500;margin:0}
+p{line-height:1.9;color:#77676A}
+.primary{width:100%;margin-top:25px}
+.note{font-size:12px;margin-top:18px}
+.topline{display:flex;align-items:center;justify-content:space-between;margin:24px 0 18px}
+.small{font-size:12px;color:var(--rose)}
+.reset{background:transparent;color:var(--darkrose);border:1px solid #D9C6C7;padding:8px 12px}
+.stage{background:var(--pale);padding:18px;border-radius:18px;min-height:410px;display:flex;align-items:center;justify-content:center}
+.photo{background:#E6D8D4;border-radius:12px;width:100%;aspect-ratio:4/5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--darkrose)}
+.photo .symbol{font-size:42px}
+.photo .num{font-family:Georgia,serif;font-size:24px;letter-spacing:2px}
+.locked{text-align:center;width:100%;padding:20px 6px}
+.locked h2{font-size:21px;margin:18px 0}
+input{width:100%;padding:15px;font-size:20px;letter-spacing:5px;text-align:center;border:1px solid #D9C6C7;border-radius:10px;background:white;color:var(--ink)}
+.error{color:#B23450;font-size:13px}
+.nav{display:flex;align-items:center;justify-content:space-between;margin:20px 0}
+.nav button{background:transparent;border:1px solid #D9C6C7;color:var(--darkrose);font-size:22px;padding:8px 19px}
+.download{width:100%;background:transparent;color:var(--darkrose);border:1px solid #D9C6C7}
+footer{text-align:center;border-top:1px solid #E5D8D4;padding:24px 0;color:var(--darkrose);font-family:Georgia,serif;font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div><div class="logo">KOYOMI</div><div class="subtitle">PRIVATE ALBUM</div></div>
+<button class="lang" id="langBtn" type="button">JP / EN</button>
+</header>
+
+<section id="ageScreen" class="screen active">
+<div class="age center">
+<div class="lockicon">♧</div>
+<div class="eyebrow">PHOTO ALBUM</div>
+<h1 data-jp="18歳以上" data-en="18+ ONLY">18歳以上</h1>
+<p data-jp="このアルバムは18歳以上の方を対象としています。年齢をご確認ください。" data-en="This album is intended for adults aged 18 or older.">このアルバムは18歳以上の方を対象としています。年齢をご確認ください。</p>
+<button class="primary" id="enterBtn" type="button" data-jp="はい、18歳以上です" data-en="Yes, I am 18 or older">はい、18歳以上です</button>
+<p class="note" data-jp="18歳未満の方は閲覧をお控えください。" data-en="Visitors under 18 should leave.">18歳未満の方は閲覧をお控えください。</p>
+</div>
+</section>
+
+<section id="albumScreen" class="screen">
+<div class="topline">
+<div><h2>Secret Album</h2><span class="small" id="pageLabel">1枚目</span></div>
+<button class="reset" id="resetBtn" type="button" data-jp="最初へ" data-en="Restart">最初へ</button>
+</div>
+<div class="stage" id="stage"></div>
+<div class="nav">
+<button id="prevBtn" type="button" aria-label="Previous">‹</button>
+<span id="counter">1 / 8</span>
+<button id="nextBtn" type="button" aria-label="Next">›</button>
+</div>
+<button class="download" id="downloadBtn" type="button" disabled data-jp="ダウンロード（画像追加後）" data-en="Download (after adding images)">ダウンロード（画像追加後）</button>
+</section>
+
+<footer>Natural, Elegant, Daily.</footer>
+</main>
+
+<script>
+(function(){
+"use strict";
+const CODE="1030";
+let lang="jp",page=0;
+const unlocked=new Set();
+const images=["","","","","","","",""];
+const $=id=>document.getElementById(id);
+function translate(){
+ document.querySelectorAll("[data-jp]").forEach(el=>{
+  el.textContent=el.dataset[lang];
+ });
+ $("pageLabel").textContent=lang==="jp"?(page+1)+"枚目":"Page "+(page+1);
+}
+function render(){
+ const stage=$("stage");
+ stage.replaceChildren();
+ const locked=page>=4&&!unlocked.has(page);
+ if(locked){
+  const wrap=document.createElement("div");
+  wrap.className="locked";
+  wrap.innerHTML='<div class="lockicon">🔒</div><h2></h2><p></p><input id="pin" type="text" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="••••" autocomplete="off"><div id="pinError" class="error" aria-live="polite"></div><button id="unlockBtn" class="primary" type="button"></button>';
+  stage.append(wrap);
+  wrap.querySelector("h2").textContent=lang==="jp"?(page+1)+"枚目の限定ページ":"Private Photo "+(page+1);
+  wrap.querySelector("p").textContent=lang==="jp"?"4桁の数字を入力してください。":"Enter the 4-digit code.";
+  wrap.querySelector("#unlockBtn").textContent=lang==="jp"?"開く":"Unlock";
+  wrap.querySelector("#unlockBtn").addEventListener("click",()=>{
+   const pin=wrap.querySelector("#pin").value;
+   if(pin===CODE){unlocked.add(page);render();}
+   else{wrap.querySelector("#pinError").textContent=lang==="jp"?"パスワードが違います。":"Incorrect code.";}
+  });
+ }else if(images[page]){
+  const img=document.createElement("img");
+  img.src=images[page];img.alt="KOYOMI Photo "+(page+1);
+  img.style.cssText="width:100%;height:auto;border-radius:12px";
+  stage.append(img);
+ }else{
+  const photo=document.createElement("div");
+  photo.className="photo";
+  photo.innerHTML='<span class="symbol">▧</span><span class="num"></span><span class="small"></span>';
+  photo.querySelector(".num").textContent="PHOTO "+String(page+1).padStart(2,"0");
+  photo.querySelector(".small").textContent=lang==="jp"?"画像は後から追加":"Image coming soon";
+  stage.append(photo);
+ }
+ $("pageLabel").textContent=lang==="jp"?(page+1)+"枚目":"Page "+(page+1);
+ $("counter").textContent=(page+1)+" / 8";
+ $("prevBtn").disabled=page===0;
+ $("nextBtn").disabled=page===7;
+ $("downloadBtn").disabled=locked||!images[page];
+}
+$("enterBtn").addEventListener("click",()=>{
+ $("ageScreen").classList.remove("active");
+ $("albumScreen").classList.add("active");
+ render();
+});
+$("langBtn").addEventListener("click",()=>{
+ lang=lang==="jp"?"en":"jp";
+ translate();render();
+});
+$("resetBtn").addEventListener("click",()=>{
+ page=0;unlocked.clear();
+ $("albumScreen").classList.remove("active");
+ $("ageScreen").classList.add("active");
+ translate();
+});
+$("prevBtn").addEventListener("click",()=>{if(page>0){page--;render();}});
+$("nextBtn").addEventListener("click",()=>{if(page<7){page++;render();}});
+$("downloadBtn").addEventListener("click",()=>{
+ if(!images[page])return;
+ const a=document.createElement("a");
+ a.href=images[page];a.download="KOYOMI_"+(page+1)+".jpg";
+ document.body.append(a);a.click();a.remove();
+});
+translate();
+})();
+</script>
+</body>
+</html>
+
